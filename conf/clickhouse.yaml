@@ -1,0 +1,37 @@
+source:
+  protocol: "http"
+  addr:
+    - "source_clickhouse_host"
+    - "source_clickhouse_host_2"
+  username: "default"
+  password: ""
+
+target:
+  protocol: "http"
+  addr:
+    - "target_clickhouse_host"
+    - "target_clickhouse_host_2"
+  username: "default"
+  password: ""
+
+database_mappings:
+  - source: "userdstb"
+    target: "userdstb"
+
+
+comparison_rules:
+  - name: "total_or_partition_aggregation"
+    aggregate_function: "count(*)"
+    where: "create_at >= '2025-01-01'"
+  - name: "total_or_partition_aggregation"
+    aggregate_function: "count(distinct uuid)"
+    where: "create_at >= '2025-01-01'"
+  - name: "row_by_row_comparison"
+    where: "create_at >= '2025-01-01'"
+    sampling:
+      method: "bernoulli"
+      ratio: 0.1
+      min_rows: 1000
+
+exclude_tables:
+  - "logs_table"
