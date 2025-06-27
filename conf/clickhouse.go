@@ -2,25 +2,29 @@ package conf
 
 import (
 	"fmt"
-	"log/slog"
-	"os"
 	"strings"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"gopkg.in/yaml.v3"
 )
 
-var ClickHOuseConfig *ClickHouseConfig
+var ClickhouseConf *ClickHouseConfig
 
 type Protocol clickhouse.Protocol
 
 type ClickHouseConfig struct {
-	Source           ClickhouseConnConfig `yaml:"source"`
-	Target           ClickhouseConnConfig `yaml:"target"`
-	DatabaseMappings []DBMapping          `yaml:"database_mappings,omitempty"`
-	TableMappings    []DBMapping          `yaml:"table_mappings,omitempty"`
-	ComparisonRules  []ComparisonRule     `yaml:"comparison_rules"`
-	ExcludeTables    []string             `yaml:"exclude_tables,omitempty"`
+	Source           ClickhouseConnConfig   `yaml:"source"`
+	Target           ClickhouseConnConfig   `yaml:"target"`
+	DatabaseMappings []DBMappingConfig      `yaml:"database_mappings,omitempty"`
+	TableMappings    []DBMappingConfig      `yaml:"table_mappings,omitempty"`
+	Comparisons      []ComparisonRuleConfig `yaml:"comparison_rules"`
+	ExcludeTables    ExcludeTablesConfig    `yaml:"exclude_tables,omitempty"`
+	ResultOutputDir  string                 `yaml:"result_output_dir,omitempty"`
+}
+
+type ExcludeTablesConfig struct {
+	Source []string `yaml:"source,omitempty"`
+	Target []string `yaml:"target,omitempty"`
 }
 
 type ClickhouseConnConfig struct {
@@ -31,12 +35,12 @@ type ClickhouseConnConfig struct {
 	Password string   `yaml:"password"`
 }
 
-type DBMapping struct {
+type DBMappingConfig struct {
 	Source string `yaml:"source"`
 	Target string `yaml:"target"`
 }
 
-type ComparisonRule struct {
+type ComparisonRuleConfig struct {
 	Name              string    `yaml:"name"`
 	AggregateFunction string    `yaml:"aggregate_function,omitempty"`
 	Where             string    `yaml:"where,omitempty"`
@@ -66,11 +70,4 @@ func (p *Protocol) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	return nil
-}
-
-func init() {
-	if err := yaml.Unmarshal(clickhouseYaml, &ClickHOuseConfig); err != nil {
-		slog.Error("failed to parse clickhouse.yaml", slog.Any("err", err))
-		os.Exit(1)
-	}
 }

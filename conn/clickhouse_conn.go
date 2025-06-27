@@ -6,6 +6,7 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/itinycheng/data-verify/conf"
+	"github.com/itinycheng/data-verify/global"
 )
 
 func NewClickHouseConn(config *conf.ClickhouseConnConfig) (*sql.DB, error) {
@@ -33,4 +34,19 @@ func NewClickHouseConn(config *conf.ClickhouseConnConfig) (*sql.DB, error) {
 	}
 
 	return conn, nil
+}
+
+func Init() {
+	config := conf.ClickhouseConf
+
+	var err error
+	global.SourceConn, err = NewClickHouseConn(&config.Source)
+	if err != nil {
+		panic("Failed to connect to source ClickHouse: " + err.Error())
+	}
+
+	global.TargetConn, err = NewClickHouseConn(&config.Target)
+	if err != nil {
+		panic("Failed to connect to target ClickHouse: " + err.Error())
+	}
 }

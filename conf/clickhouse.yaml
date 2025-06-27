@@ -1,23 +1,20 @@
 source:
   protocol: "http"
   addr:
-    - "source_clickhouse_host"
-    - "source_clickhouse_host_2"
-  username: "default"
-  password: ""
+    - "target_clickhouse_host_port"
+  username: "admin"
+  password: "111111"
 
 target:
   protocol: "http"
   addr:
-    - "target_clickhouse_host"
-    - "target_clickhouse_host_2"
-  username: "default"
-  password: ""
+    - "target_clickhouse_host_port"
+  username: "admin"
+  password: "111111"
 
 database_mappings:
   - source: "userdstb"
     target: "userdstb"
-
 
 comparison_rules:
   - name: "total_or_partition_aggregation"
@@ -26,12 +23,33 @@ comparison_rules:
   - name: "total_or_partition_aggregation"
     aggregate_function: "count(distinct uuid)"
     where: "create_at >= '2025-01-01'"
-  - name: "row_by_row_comparison"
-    where: "create_at >= '2025-01-01'"
-    sampling:
-      method: "bernoulli"
-      ratio: 0.1
-      min_rows: 1000
+  #- name: "row_by_row_comparison"
+  #  where: "create_at >= '2025-01-01'"
+  #  sampling:
+  #    method: "cityHash64"
+  #    factor: 0.2
+  #    max_rows: 1000
 
 exclude_tables:
-  - "logs_table"
+  source:
+    - "t_sensors_event_all"
+    - "t_user_array_float_all"
+    - "t_user_array_string_all"
+    - "t_user_daily_array_float_all"
+    - "t_user_daily_array_string_all"
+    - "t_user_daily_generic_feature_all"
+    - "t_user_generic_list_all"
+    - "t_user_map_all"
+    - "t_user_string_all"
+  target:
+    - "t_sensors_event_all"
+    - "t_user_array_float_all"
+    - "t_user_array_string_all"
+    - "t_user_daily_array_float_all"
+    - "t_user_daily_array_string_all"
+    - "t_user_daily_generic_feature_all"
+    - "t_user_generic_list_all"
+    - "t_user_map_all"
+    - "t_user_string_all"
+
+result_output_dir: "./verify_results"

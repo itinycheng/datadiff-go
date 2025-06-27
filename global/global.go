@@ -1,6 +1,8 @@
 package global
 
-import "database/sql"
+import (
+	"database/sql"
+)
 
 var (
 	SourceConn *sql.DB
