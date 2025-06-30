@@ -50,20 +50,24 @@ func Diff(a, b []model.TableInfo) []model.TableInfo {
 }
 
 func IsSliceOrArray(v any) bool {
+	if v == nil {
+		return false
+	}
+
 	kind := reflect.TypeOf(v).Kind()
 	return kind == reflect.Array || kind == reflect.Slice
 }
 
 func ToAnySlice(v any) []any {
-    val := reflect.ValueOf(v)
-    if val.Kind() == reflect.Array || val.Kind() == reflect.Slice {
-        slice := make([]any, val.Len())
-        for i := 0; i < val.Len(); i++ {
-            slice[i] = val.Index(i).Interface()
-        }
-        return slice
-    }
-    return nil
+	val := reflect.ValueOf(v)
+	if val.Kind() == reflect.Array || val.Kind() == reflect.Slice {
+		slice := make([]any, val.Len())
+		for i := 0; i < val.Len(); i++ {
+			slice[i] = val.Index(i).Interface()
+		}
+		return slice
+	}
+	return nil
 }
 
 func SortAny(s []any, sType Order) {

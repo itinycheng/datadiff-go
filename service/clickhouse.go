@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/itinycheng/data-verify/conf"
 	"github.com/itinycheng/data-verify/model"
@@ -67,35 +68,30 @@ func (service *ClickHouseVerifyService) FilterExcludedTables(tables []model.Tabl
 }
 
 func (service *ClickHouseVerifyService) PrepareDataForVerification(dataPool *model.DataPool) error {
-	rules := dataPool.Rules
-	for i := range rules {
-		rule := &rules[i]
-		sqls := rule.BuildSQLs(&dataPool.SourceTable)
-
-		for _, sql := range sqls.Source {
-			maps, err := clickhouseSourceRepo.QueryRowToMap(sql)
-			if err != nil || maps == nil {
-				slog.Error("Failed to query source data", "sql", sql, "error", err)
-				return err
-			}
-
-			for _, rowMap := range maps {
-				key := rowMap[util.PK].(string) + "_" + strconv.Itoa(i)
-				dataPool.Source[key] = rowMap
-			}
+	sqls := dataPool.SQLs
+	for _, sql := range sqls.Source {
+		maps, err := clickhouseSourceRepo.QueryRowToMap(sql)
+		if err != nil || maps == nil {
+			slog.Error("Failed to query source data", "sql", sql, "error", err)
+			return err
 		}
 
-		for _, sql := range sqls.Target {
-			maps, err := clickhouseTargetRepo.QueryRowToMap(sql)
-			if err != nil || maps == nil {
-				slog.Error("Failed to query source data", "sql", sql, "error", err)
-				return err
-			}
+		for _, rowMap := range maps {
+			key := rowMap[util.PK].(string) + "_" + strconv.Itoa(sqls.Id)
+			dataPool.Source[key] = rowMap
+		}
+	}
 
-			for _, rowMap := range maps {
-				key := rowMap[util.PK].(string) + "_" + strconv.Itoa(i)
-				dataPool.Target[key] = rowMap
-			}
+	for _, sql := range sqls.Target {
+		maps, err := clickhouseTargetRepo.QueryRowToMap(sql)
+		if err != nil || maps == nil {
+			slog.Error("Failed to query source data", "sql", sql, "error", err)
+			return err
+		}
+
+		for _, rowMap := range maps {
+			key := rowMap[util.PK].(string) + "_" + strconv.Itoa(sqls.Id)
+			dataPool.Target[key] = rowMap
 		}
 	}
 
@@ -133,10 +129,10 @@ func (service *ClickHouseVerifyService) Verify(data *model.DataPool) {
 
 	var builder strings.Builder
 	builder.WriteString("Table: " + tableName)
-	builder.WriteString(", Source rows: " + strconv.Itoa(sourceRows))
-	builder.WriteString(", Target rows: " + strconv.Itoa(targetRows))
-	builder.WriteString(", Rules: " + strconv.Itoa(len(data.Rules)))
-	builder.WriteString(", Mismatches: " + fmt.Sprintf("%.5f", mismatchRatio))
+	builder.WriteString("\n		SQLs: " + data.SQLs.String())
+	builder.WriteString("\n		Source rows: " + strconv.Itoa(sourceRows))
+	builder.WriteString("\n		Target rows: " + strconv.Itoa(targetRows))
+	builder.WriteString("\n		Mismatches: " + fmt.Sprintf("%.5f", mismatchRatio))
 	s.WriteString(builder.String() + "\n")
 
 	slog.Info("Verification results written", "file", o.Name())
@@ -147,6 +143,8 @@ func createOutputAndSummaryFile(outputDir string, filePrefix string) (*os.File, 
 	if outputDir == "" {
 		outputDir = "."
 	}
+	subDir := time.Now().Format("20060102")
+	outputDir = outputDir + "/" + subDir
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return nil, nil, err
 	}
@@ -200,16 +198,36 @@ func findVerifiableTables(r *repo.ClickHouseRepo, database string) ([]model.Tabl
 		tables = append(tables, info)
 	}
 
-Outer:
-	for _, table := range all {
-		for _, distr := range distrTables {
+	for i := range all {
+		table := &all[i]
+		if table.IsDistributed() {
+			continue
+		}
+
+		skip := false
+		for j := range distrTables {
+			distr := &distrTables[j]
 			if strings.Contains(distr.EngineFull, table.Name) {
-				slog.Debug("Skipping table", "table", table, "engine_full", distr.EngineFull)
-				continue Outer
+				slog.Debug("Skipping table", "table", table.Name, "engine_full", distr.EngineFull)
+				skip = true
+				break
 			}
 		}
 
-		tables = append(tables, table)
+		if !skip {
+			tables = append(tables, *table)
+		}
+	}
+
+	// Query columns for each table
+	for i := range tables {
+		table := &tables[i]
+		columns, err := r.QueryAllColumns(table.Database, table.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		table.Columns = columns
 	}
 
 	return tables, nil

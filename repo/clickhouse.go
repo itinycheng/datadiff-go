@@ -8,6 +8,7 @@ import (
 )
 
 const (
+	allTableColumns   = "SELECT name from system.columns WHERE database = ? AND table = ?"
 	allTableEngines   = "SELECT name, database, engine, engine_full, partition_key, sorting_key FROM system.tables WHERE database = ?"
 	distrTableEngines = "SELECT name, database, engine, engine_full, partition_key, sorting_key FROM system.tables WHERE database = ? AND engine = 'Distributed'"
 	partitionKeyQuery = "SELECT partition_key, sorting_key FROM system.tables WHERE name = ? AND database = ? LIMIT 1"
@@ -19,6 +20,30 @@ type ClickHouseRepo struct {
 
 func NewClickHouseRepo(conn *sql.DB) *ClickHouseRepo {
 	return &ClickHouseRepo{conn: conn}
+}
+
+func (r *ClickHouseRepo) QueryAllColumns(database, table string) ([]string, error) {
+	slog.Info("Querying all columns", "database", database, "table", table)
+	rows, err := r.conn.Query(allTableColumns, database, table)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var columns []string
+	for rows.Next() {
+		var columnName string
+		if err := rows.Scan(&columnName); err != nil {
+			return nil, err
+		}
+		columns = append(columns, columnName)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return columns, nil
 }
 
 func (r *ClickHouseRepo) QueryRowToMap(query string, args ...any) ([]map[string]any, error) {

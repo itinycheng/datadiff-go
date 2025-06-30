@@ -46,21 +46,36 @@ func main() {
 		tables = verifyService.FilterExcludedTables(tables, config.ExcludeTables)
 		slog.Info("Tables to be verified", "source", mapping.Source, "target", mapping.Target, "tables", tables)
 
-		// Initialize the data pool for verification
 		for _, info := range tables {
-			slog.Info("Initializing data and verify", "table", info)
-			data := &model.DataPool{
-				SourceTable: info,
-				SourceDb:    mapping.Source,
-				TargetDb:    mapping.Target,
-				Source:      make(map[string]map[string]any),
-				Target:      make(map[string]map[string]any),
-				Rules:       rules,
-				OutputDir:   config.ResultOutputDir,
-			}
-			verifyService.PrepareDataForVerification(data)
-			verifyService.Verify(data)
+			doVerify(&info, rules)
 		}
+	}
+}
+
+func doVerify(table *model.TableInfo, rules []model.ComparisonRule) {
+	table.ExcludeColumns = conf.ClickhouseConf.ExcludeColumns.Source
+	for i := range rules {
+		rule := &rules[i]
+		slog.Info("Initializing data and verify", "table", table.Name)
+
+		sqls := rule.BuildSQLs(table)
+		sqls.Id = i
+		if !sqls.IsValidSQL() {
+			slog.Error("Invalid SQLs generated", "sqls", sqls)
+			continue
+		}
+
+		data := &model.DataPool{
+			SourceTable: table,
+			SQLs:        &sqls,
+			Source:      make(map[string]map[string]any),
+			Target:      make(map[string]map[string]any),
+			OutputDir:   conf.ClickhouseConf.ResultOutputDir,
+		}
+
+		verifyService.PrepareDataForVerification(data)
+		verifyService.Verify(data)
+		slog.Info("Rule verified", "rule", rule, "table", table.Name)
 	}
 }
 

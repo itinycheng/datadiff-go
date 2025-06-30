@@ -39,13 +39,79 @@ func BuildComparisonRules(ruleConfigs []conf.ComparisonRuleConfig) ([]model.Comp
 	return rules, nil
 }
 
-//select (* - orderbys - partitions), concat(toString(orderbys) + toString(partition)) as pk from table where sampling(pk) / 100 = random and {{where}} 
+// select (* - orderbys - partitions), concat(toString(orderbys) + toString(partition)) as pk from table where sampling(pk) / 100 = random and {{where}}
 func buildRowByRowComparisonRule(config conf.ComparisonRuleConfig) (model.ComparisonRule, error) {
 	return model.ComparisonRule{
 		CmpType: model.ComparisonTypeRowByRow,
 		BuildSQLs: func(table *model.TableInfo) model.VerifySQLs {
-			
-			return model.VerifySQLs{}
+			var builder strings.Builder
+			builder.WriteString("SELECT ")
+
+			// columns
+			columns := table.FilteredColumns()
+			if len(columns) == 0 {
+				builder.WriteString("'' as _null_column ")
+			} else {
+				builder.WriteString("`")
+				builder.WriteString(strings.Join(columns, "`, `"))
+				builder.WriteString("`")
+			}
+
+			var pkCols []string
+			sortingKeys := splitKeys(table.GetActualSortingKey())
+			if sortingKeys != nil {
+				for _, col := range sortingKeys {
+					if col == "" {
+						continue
+					}
+
+					pkCols = append(pkCols, "toString("+col+")")
+				}
+			}
+
+			partitionKeys := splitKeys(table.GetActualPartitionKey())
+			if partitionKeys != nil {
+				for _, col := range partitionKeys {
+					if col == "" {
+						continue
+					}
+
+					pkCols = append(pkCols, "toString("+col+")")
+				}
+			}
+
+			if len(pkCols) > 0 {
+				builder.WriteString(", concat('")
+				builder.WriteString(table.Name)
+				builder.WriteString("-'")
+				builder.WriteString(", ")
+				builder.WriteString(strings.Join(pkCols, ", "))
+				builder.WriteString(") AS ")
+				builder.WriteString(PK)
+			} else {
+				builder.WriteString(", concat(")
+				builder.WriteString(strings.Join(table.Columns, ", "))
+				builder.WriteString(") AS ")
+				builder.WriteString(PK)
+			}
+
+			builder.WriteString(" FROM ")
+			builder.WriteString(table.Database)
+			builder.WriteString(".")
+			builder.WriteString(table.Name)
+			builder.WriteString(" WHERE ")
+			builder.WriteString(config.Where)
+
+			sampling := config.Sampling.BuildSampling()
+			if sampling != "" {
+				builder.WriteString(" AND ")
+				builder.WriteString(sampling)
+			}
+
+			return model.VerifySQLs{
+				Source: []string{builder.String()},
+				Target: []string{builder.String()},
+			}
 		},
 	}, nil
 }
@@ -60,12 +126,7 @@ func buildTotalOrPartitionAggregationRule(config conf.ComparisonRuleConfig) (mod
 	return model.ComparisonRule{
 		CmpType: model.ComparisonTypeTotalOrPartitionAggregation,
 		BuildSQLs: func(table *model.TableInfo) model.VerifySQLs {
-			var partitionKey string
-			if table.IsDistributed() {
-				partitionKey = table.LocalPartitionKey
-			} else {
-				partitionKey = table.PartitionKey
-			}
+			partitionKey := table.GetActualPartitionKey()
 
 			var builder strings.Builder
 			builder.WriteString("SELECT ")
@@ -105,4 +166,12 @@ func buildTotalOrPartitionAggregationRule(config conf.ComparisonRuleConfig) (mod
 			}
 		},
 	}, nil
+}
+
+func splitKeys(s string) []string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	return SplitFields(s)
 }

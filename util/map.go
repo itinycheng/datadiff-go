@@ -13,10 +13,6 @@ func DeepEqual(a, b map[string]any) bool {
 			return false
 		}
 
-		if v == bv {
-			return true
-		}
-
 		if IsSliceOrArray(v) {
 			vSlice := ToAnySlice(v)
 			bvSlice := ToAnySlice(bv)

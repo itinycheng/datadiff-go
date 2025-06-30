@@ -8,6 +8,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	SamplingCityHash64 = "cityHash64"
+)
+
 var ClickhouseConf *ClickHouseConfig
 
 type Protocol clickhouse.Protocol
@@ -19,7 +23,13 @@ type ClickHouseConfig struct {
 	TableMappings    []DBMappingConfig      `yaml:"table_mappings,omitempty"`
 	Comparisons      []ComparisonRuleConfig `yaml:"comparison_rules"`
 	ExcludeTables    ExcludeTablesConfig    `yaml:"exclude_tables,omitempty"`
+	ExcludeColumns   ExcludeColumnsConfig   `yaml:"exclude_columns,omitempty"`
 	ResultOutputDir  string                 `yaml:"result_output_dir,omitempty"`
+}
+
+type ExcludeColumnsConfig struct {
+	Source []string `yaml:"source,omitempty"`
+	Target []string `yaml:"target,omitempty"`
 }
 
 type ExcludeTablesConfig struct {
@@ -41,17 +51,34 @@ type DBMappingConfig struct {
 }
 
 type ComparisonRuleConfig struct {
-	Name              string    `yaml:"name"`
-	AggregateFunction string    `yaml:"aggregate_function,omitempty"`
-	Where             string    `yaml:"where,omitempty"`
-	Sampling          *Sampling `yaml:"sampling,omitempty"`
+	Name              string   `yaml:"name"`
+	AggregateFunction string   `yaml:"aggregate_function,omitempty"`
+	Where             string   `yaml:"where,omitempty"`
+	Sampling          Sampling `yaml:"sampling,omitempty"`
 }
 
 // Sampling defines the configuration for table sampling.
 type Sampling struct {
-	Method  string  `yaml:"method"`
-	Ratio   float64 `yaml:"ratio"`
-	MinRows int     `yaml:"min_rows,omitempty"`
+	Method string  `yaml:"method"`
+	Ratio  float64 `yaml:"ratio"`
+}
+
+func (s *Sampling) BuildSampling() string {
+	if s.Method == "" {
+		return ""
+	}
+
+	if s.Method != SamplingCityHash64 {
+		panic(fmt.Sprintf("Unsupported sampling method: %s", s.Method))
+	}
+
+	sampleRatio := int(1 / s.Ratio)
+
+	var builder strings.Builder
+	builder.WriteString(SamplingCityHash64)
+	builder.WriteString("(pk) % ")
+	builder.WriteString(fmt.Sprintf("%d = 0", sampleRatio))
+	return builder.String()
 }
 
 func (p *Protocol) UnmarshalYAML(value *yaml.Node) error {
