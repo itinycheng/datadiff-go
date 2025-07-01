@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"log/slog"
 
 	"github.com/itinycheng/data-verify/conf"
@@ -11,20 +10,9 @@ import (
 	"github.com/itinycheng/data-verify/util"
 )
 
-const (
-	ModeClickHouse = "clickhouse"
-	ModeHdfs       = "hdfs"
-)
-
 var verifyService service.VerifyService
 
 func main() {
-	mode := flag.String("mode", "clickhouse", "Mode of operation, currently only 'clickhouse' is supported")
-	if mode == nil || *mode != ModeClickHouse {
-		slog.Error("Unsupported mode. Currently only 'clickhouse' is supported.")
-		return
-	}
-
 	config := conf.ClickhouseConf
 	rules, err := util.BuildComparisonRules(config.Comparisons)
 	if err != nil {

@@ -12,7 +12,9 @@
             "program": "${workspaceFolder}/main.go",
             "args": [
                 "--mode",
-                "clickhouse"
+                "clickhouse",
+                "--config",
+                "${workspaceFolder}/conf/clickhouse.yaml"
             ],
         },
     ]

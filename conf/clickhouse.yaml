@@ -23,12 +23,11 @@ comparison_rules:
   - name: "total_or_partition_aggregation"
     aggregate_function: "count(distinct uuid)"
     where: "create_at >= '2025-01-01'"
-  #- name: "row_by_row_comparison"
-  #  where: "create_at >= '2025-01-01'"
-  #  sampling:
-  #    method: "cityHash64"
-  #    factor: 0.2
-  #    max_rows: 1000
+  - name: "row_by_row_comparison"
+    where: "create_at >= '2025-01-01'"
+    sampling:
+      method: "cityHash64"
+      ratio: 0.01
 
 exclude_tables:
   source:
@@ -51,5 +50,11 @@ exclude_tables:
     - "t_user_generic_list_all"
     - "t_user_map_all"
     - "t_user_string_all"
+
+exclude_columns:
+  source:
+    - "create_at"
+  target:
+    - "create_at"
 
 result_output_dir: "./verify_results"
