@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/itinycheng/data-verify/conf"
-	"github.com/itinycheng/data-verify/model"
-	"github.com/itinycheng/data-verify/repo"
-	"github.com/itinycheng/data-verify/util"
+	"github.com/itinycheng/datadiff-go/conf"
+	"github.com/itinycheng/datadiff-go/model"
+	"github.com/itinycheng/datadiff-go/repo"
+	"github.com/itinycheng/datadiff-go/util"
 )
 
 type ClickHouseVerifyService struct{}

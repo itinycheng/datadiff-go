@@ -1,4 +1,4 @@
-module github.com/itinycheng/data-verify
+module github.com/itinycheng/datadiff-go
 
 go 1.24.2
 

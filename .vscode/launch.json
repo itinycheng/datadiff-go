@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "ClickHouse Verify App",
+            "name": "Diff Data App",
             "type": "go",
             "request": "launch",
             "mode": "debug",

@@ -1,10 +1,10 @@
 package service
 
 import (
-	"github.com/itinycheng/data-verify/conf"
-	"github.com/itinycheng/data-verify/global"
-	"github.com/itinycheng/data-verify/model"
-	"github.com/itinycheng/data-verify/repo"
+	"github.com/itinycheng/datadiff-go/conf"
+	"github.com/itinycheng/datadiff-go/global"
+	"github.com/itinycheng/datadiff-go/model"
+	"github.com/itinycheng/datadiff-go/repo"
 )
 
 var (

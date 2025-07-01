@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/itinycheng/data-verify/util"
+	"github.com/itinycheng/datadiff-go/util"
 	"github.com/stretchr/testify/require"
 )
 

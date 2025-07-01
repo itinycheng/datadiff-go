@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/itinycheng/data-verify/model"
+	"github.com/itinycheng/datadiff-go/model"
 )
 
 type Order int

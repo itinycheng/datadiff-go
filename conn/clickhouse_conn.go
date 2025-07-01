@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
-	"github.com/itinycheng/data-verify/conf"
-	"github.com/itinycheng/data-verify/global"
+	"github.com/itinycheng/datadiff-go/conf"
+	"github.com/itinycheng/datadiff-go/global"
 )
 
 func NewClickHouseConn(config *conf.ClickhouseConnConfig) (*sql.DB, error) {

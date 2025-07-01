@@ -4,8 +4,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/itinycheng/data-verify/conf"
-	"github.com/itinycheng/data-verify/model"
+	"github.com/itinycheng/datadiff-go/conf"
+	"github.com/itinycheng/datadiff-go/model"
 )
 
 const (

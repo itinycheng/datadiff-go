@@ -3,11 +3,11 @@ package main
 import (
 	"log/slog"
 
-	"github.com/itinycheng/data-verify/conf"
-	"github.com/itinycheng/data-verify/conn"
-	"github.com/itinycheng/data-verify/model"
-	"github.com/itinycheng/data-verify/service"
-	"github.com/itinycheng/data-verify/util"
+	"github.com/itinycheng/datadiff-go/conf"
+	"github.com/itinycheng/datadiff-go/conn"
+	"github.com/itinycheng/datadiff-go/model"
+	"github.com/itinycheng/datadiff-go/service"
+	"github.com/itinycheng/datadiff-go/util"
 )
 
 var verifyService service.VerifyService

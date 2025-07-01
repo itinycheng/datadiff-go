@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"log/slog"
 
-	"github.com/itinycheng/data-verify/model"
+	"github.com/itinycheng/datadiff-go/model"
 )
 
 const (
