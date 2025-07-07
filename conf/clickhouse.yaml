@@ -57,4 +57,4 @@ exclude_columns:
   target:
     - "create_at"
 
-result_output_dir: "./verify_results"
+result_output_dir: "./diff_results"

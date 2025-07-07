@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/deckarep/golang-set/v2"
+	"github.com/itinycheng/datadiff-go/common"
 	"gopkg.in/yaml.v3"
 )
 
@@ -12,13 +14,15 @@ const (
 	SamplingCityHash64 = "cityHash64"
 )
 
-var ClickhouseConf *ClickHouseConfig
-
 type Protocol clickhouse.Protocol
 
+type StringSet struct {
+	mapset.Set[string]
+}
+
 type ClickHouseConfig struct {
-	Source           ClickhouseConnConfig   `yaml:"source"`
-	Target           ClickhouseConnConfig   `yaml:"target"`
+	Source           ClickhouseConnConfig   `yaml:"source" validate:"required"`
+	Target           ClickhouseConnConfig   `yaml:"target" validate:"required"`
 	DatabaseMappings []DBMappingConfig      `yaml:"database_mappings,omitempty"`
 	TableMappings    []DBMappingConfig      `yaml:"table_mappings,omitempty"`
 	Comparisons      []ComparisonRuleConfig `yaml:"comparison_rules"`
@@ -27,14 +31,23 @@ type ClickHouseConfig struct {
 	ResultOutputDir  string                 `yaml:"result_output_dir,omitempty"`
 }
 
+func (*ClickHouseConfig) Validate() error {
+	return nil
+}
+
+// ClickHouseConfig should implement common.JobConf interface
+func (c *ClickHouseConfig) GetType() string {
+	return common.ModeClickHouse
+}
+
 type ExcludeColumnsConfig struct {
 	Source []string `yaml:"source,omitempty"`
 	Target []string `yaml:"target,omitempty"`
 }
 
 type ExcludeTablesConfig struct {
-	Source []string `yaml:"source,omitempty"`
-	Target []string `yaml:"target,omitempty"`
+	Source StringSet `yaml:"source,omitempty"`
+	Target StringSet `yaml:"target,omitempty"`
 }
 
 type ClickhouseConnConfig struct {
@@ -81,6 +94,9 @@ func (s *Sampling) BuildSampling() string {
 	return builder.String()
 }
 
+// ===================================================
+// ================ unmarshal methods ================
+// ===================================================
 func (p *Protocol) UnmarshalYAML(value *yaml.Node) error {
 	var s string
 	if err := value.Decode(&s); err != nil {
@@ -96,5 +112,20 @@ func (p *Protocol) UnmarshalYAML(value *yaml.Node) error {
 		return fmt.Errorf("unknown protocol: %s", s)
 	}
 
+	return nil
+}
+
+func (s *StringSet) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind != yaml.SequenceNode {
+		return fmt.Errorf("YAML node is not a sequence, but a %v", node.Kind)
+	}
+
+	var items []string
+	if err := node.Decode(&items); err != nil {
+		return fmt.Errorf("failed to decode YAML sequence into string slice: %w", err)
+	}
+
+	newSet := mapset.NewThreadUnsafeSet(items...)
+	*s = StringSet{newSet}
 	return nil
 }

@@ -1,49 +1,48 @@
 package conf
 
 import (
-	_ "embed"
 	"flag"
+	"fmt"
 	"log/slog"
 	"os"
 
+	"github.com/itinycheng/datadiff-go/common"
 	"gopkg.in/yaml.v3"
 )
 
-const (
-	ModeClickHouse = "clickhouse"
-	ModeHdfs       = "hdfs"
-
-	defaultConfigFile = "conf/clickhouse.yaml"
-)
-
-// //go:embed clickhouse_prod.yaml
-// var clickhouseYaml []byte
-
-func Init() {
-	mode := flag.String("mode", ModeClickHouse, "Mode of operation, currently only 'clickhouse' is supported")
-	configFile := flag.String("config", defaultConfigFile, "Path to the config file (optional)")
+func LoadConfig() (common.JobConf, error) {
+	mode := flag.String("mode", common.ModeClickHouse, "Mode of operation, currently only 'clickhouse' is supported")
+	configFile := flag.String("config", common.DefaultConfigFile, "Path to the config file (optional)")
 	flag.Parse()
 
-	if mode == nil || *mode != ModeClickHouse {
-		panic("Unsupported mode. Currently only 'clickhouse' is supported.")
+	if mode == nil || *mode != common.ModeClickHouse {
+		return nil, fmt.Errorf("Unsupported mode. Currently only 'clickhouse' is supported.")
 	}
 	if configFile == nil || *configFile == "" {
-		panic("Config file path is required. Use -config to specify the path.")
+		return nil, fmt.Errorf("Config file path is required. Use -config to specify the path.")
 	}
 
 	file, err := os.Open(*configFile)
 	if err != nil {
-		panic("Error opening config file: " + err.Error())
+		return nil, fmt.Errorf("Error opening config file: %w", err)
 	}
 	defer file.Close()
 
-	var clickhouseConf ClickHouseConfig
-	if err := yaml.NewDecoder(file).Decode(&clickhouseConf); err != nil {
-		panic("Error decoding config file: " + err.Error())
+	var config common.JobConf
+	switch *mode {
+	case common.ModeClickHouse:
+		var clickhouseConf ClickHouseConfig
+		if err := yaml.NewDecoder(file).Decode(&clickhouseConf); err != nil {
+			return nil, fmt.Errorf("Error decoding ClickHouse config file: %w", err)
+		}
+		config = &clickhouseConf
+	case common.ModeMysql:
+	case common.ModeHdfs:
+		return nil, fmt.Errorf("Unsupported mode: %s", *mode)
 	}
 
-	ClickhouseConf = &clickhouseConf
 	slog.Info("Configuration loaded successfully",
 		"mode", *mode,
 		"configFile", *configFile)
+	return config, nil
 }

@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/itinycheng/datadiff-go/model"
+	"github.com/itinycheng/datadiff-go/common"
 	"github.com/spf13/cast"
 )
 
@@ -16,12 +16,14 @@ const (
 	Desc
 )
 
-// TODO
-func Intersect(a, b []model.TableInfo) []model.TableInfo {
-	var result []model.TableInfo
+func Intersect[T any, PT interface {
+	*T
+	common.IEqual[T]
+}](a, b []PT) []PT {
+	var result []PT
 	for _, m := range a {
 		for _, n := range b {
-			if m.Equal(&n) {
+			if m.Equal(n) {
 				result = append(result, m)
 				break
 			}
@@ -31,12 +33,15 @@ func Intersect(a, b []model.TableInfo) []model.TableInfo {
 	return result
 }
 
-func Diff(a, b []model.TableInfo) []model.TableInfo {
-	var result []model.TableInfo
+func Diff[T any, PT interface {
+	*T
+	common.IEqual[T]
+}](a, b []PT) []PT {
+	var result []PT
 	for _, m := range a {
 		exists := false
 		for _, n := range b {
-			if m.Equal(&n) {
+			if m.Equal(n) {
 				exists = true
 				break
 			}

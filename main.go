@@ -3,77 +3,76 @@ package main
 import (
 	"log/slog"
 
+	"github.com/itinycheng/datadiff-go/common"
 	"github.com/itinycheng/datadiff-go/conf"
-	"github.com/itinycheng/datadiff-go/conn"
-	"github.com/itinycheng/datadiff-go/model"
 	"github.com/itinycheng/datadiff-go/service"
-	"github.com/itinycheng/datadiff-go/util"
 )
 
-var verifyService service.VerifyService
-
 func main() {
-	config := conf.ClickhouseConf
-	rules, err := util.BuildComparisonRules(config.Comparisons)
+	config, err := conf.LoadConfig()
 	if err != nil {
-		slog.Error("Failed to build comparison rules", "error", err)
+		slog.Error("Invalid configuration", "error", err)
 		return
 	}
 
-	// Initialize verify service.
-	verifyService = &service.ClickHouseVerifyService{}
-
-	for _, mapping := range config.DatabaseMappings {
-		// Get verifiable tables.
-		tables, err := verifyService.GetVerifiableTables(mapping)
-		if err != nil || len(tables) == 0 {
-			slog.Error("Failed to get verifiable tables", "error", err)
-			continue
-		}
-
-		tables = verifyService.FilterExcludedTables(tables, config.ExcludeTables)
-		slog.Info("Tables to be verified", "source", mapping.Source, "target", mapping.Target, "tables", tables)
-
-		for _, info := range tables {
-			doVerify(&info, rules)
-		}
+	if err := config.Validate(); err != nil {
+		slog.Error("Invalid configuration", "error", err)
+		return
 	}
-}
 
-func doVerify(table *model.TableInfo, rules []model.ComparisonRule) {
-	table.ExcludeColumns = conf.ClickhouseConf.ExcludeColumns.Source
-	for i := range rules {
-		rule := &rules[i]
-		slog.Info("Initializing data and verify", "table", table.Name)
-
-		sqls := rule.BuildSQLs(table)
-		sqls.Id = i
-		if !sqls.IsValidSQL() {
-			slog.Error("Invalid SQLs generated", "sqls", sqls)
-			continue
+	switch config.GetType() {
+	case common.ModeClickHouse:
+		clickhouseConfig, ok := config.(*conf.ClickHouseConfig)
+		if !ok {
+			slog.Error("Invalid configuration type for ClickHouse", "error", err)
+			return
 		}
-
-		data := &model.DataPool{
-			SourceTable: table,
-			SQLs:        &sqls,
-			Source:      make(map[string]map[string]any),
-			Target:      make(map[string]map[string]any),
-			OutputDir:   conf.ClickhouseConf.ResultOutputDir,
-		}
-
-		err := verifyService.PrepareDataForVerification(data)
+		clickhouseService, err := service.NewClickHouseDiffService(clickhouseConfig)
 		if err != nil {
-			slog.Error("Failed to prepare data for verification", "error", err)
-			continue
+			slog.Error("Failed to create ClickHouseDiffService", "error", err)
+			return
 		}
-
-		verifyService.Verify(data)
-		slog.Info("Rule verified", "rule", rule, "table", table.Name)
+		runDiff(clickhouseService, clickhouseConfig)
 	}
+
 }
 
-func init() {
-	conf.Init()
-	conn.Init()
-	service.Init()
+func runDiff[C common.JobConf, D,  P any](
+	service common.DiffService[C, D, P],
+	config C,
+) {
+	err := service.ValidateConfig(config)
+	if err != nil {
+		slog.Error("Invalid configuration", "error", err)
+		return
+	}
+
+	// rules, err := util.BuildComparisonRules(config.Comparisons)
+	rules, err := service.ListComparisonRules(config)
+	if err != nil || len(rules) == 0 {
+		slog.Error("Failed to build comparison rules or no rules found", "error", err)
+		return
+	}
+
+	descriptors, err := service.ListDescriptors(config)
+	if err != nil || len(descriptors) == 0 {
+		slog.Error("Failed to list descriptors or no descriptors found", "error", err)
+		return
+	}
+
+	for idx := range descriptors {
+		descriptor := &descriptors[idx]
+		for rIdx := range rules {
+			rule := &rules[rIdx]
+			data, err := service.PrepareData(config, descriptor, rule)
+			if err != nil {
+				slog.Error("Failed to prepare data", "error", err)
+				continue
+			}
+			service.Diff(&data)
+			slog.Info("Diff completed", "descriptor", descriptor, "rule", rule)
+		}
+	}
+
+	slog.Info("All data diff tasks completed.")
 }

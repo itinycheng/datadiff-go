@@ -1,4 +1,4 @@
-package util
+package service
 
 import (
 	"errors"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/itinycheng/datadiff-go/conf"
 	"github.com/itinycheng/datadiff-go/model"
+	"github.com/itinycheng/datadiff-go/util"
 )
 
 const (
@@ -14,7 +15,7 @@ const (
 	PK                          = "__datadiff_generated_pk"
 )
 
-func BuildComparisonRules(ruleConfigs []conf.ComparisonRuleConfig) ([]model.ComparisonRule, error) {
+func buildComparisonRules(ruleConfigs []conf.ComparisonRuleConfig) ([]model.ComparisonRule, error) {
 	var rules []model.ComparisonRule
 	for _, config := range ruleConfigs {
 		var (
@@ -173,5 +174,5 @@ func splitKeys(s string) []string {
 	if s == "" {
 		return nil
 	}
-	return SplitFields(s)
+	return util.SplitFields(s)
 }

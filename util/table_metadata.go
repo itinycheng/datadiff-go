@@ -1,6 +1,8 @@
 package util
 
-import "strings"
+import (
+	"strings"
+)
 
 func SplitFields(s string) []string {
 	var fields []string

@@ -6,9 +6,10 @@
         "expr",
         "hdfs",
         "itinycheng",
+        "mapset",
         "Ptrs",
         "sqls",
         "toString",
-        "userdstb"
+        "userdstb",
     ]
 }
