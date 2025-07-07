@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -69,32 +70,20 @@ func (service *ClickHouseVerifyService) FilterExcludedTables(tables []model.Tabl
 
 func (service *ClickHouseVerifyService) PrepareDataForVerification(dataPool *model.DataPool) error {
 	sqls := dataPool.SQLs
-	for _, sql := range sqls.Source {
-		maps, err := clickhouseSourceRepo.QueryRowToMap(sql)
-		if err != nil || maps == nil {
-			slog.Error("Failed to query source data", "sql", sql, "error", err)
-			return err
-		}
+	sourceCh := make(chan dataResult, 1)
+	targetCh := make(chan dataResult, 1)
 
-		for _, rowMap := range maps {
-			key := rowMap[util.PK].(string) + "_" + strconv.Itoa(sqls.Id)
-			dataPool.Source[key] = rowMap
-		}
+	go getDataMap(sqls.Id, sqls.Source, sourceCh)
+	go getDataMap(sqls.Id, sqls.Target, targetCh)
+	sourceResult := <-sourceCh
+	targetResult := <-targetCh
+
+	if sourceResult.Err != nil || targetResult.Err != nil {
+		return errors.Join(sourceResult.Err, targetResult.Err)
 	}
 
-	for _, sql := range sqls.Target {
-		maps, err := clickhouseTargetRepo.QueryRowToMap(sql)
-		if err != nil || maps == nil {
-			slog.Error("Failed to query source data", "sql", sql, "error", err)
-			return err
-		}
-
-		for _, rowMap := range maps {
-			key := rowMap[util.PK].(string) + "_" + strconv.Itoa(sqls.Id)
-			dataPool.Target[key] = rowMap
-		}
-	}
-
+	dataPool.Source = sourceResult.Data
+	dataPool.Target = targetResult.Data
 	return nil
 }
 
@@ -139,6 +128,29 @@ func (service *ClickHouseVerifyService) Verify(data *model.DataPool) {
 }
 
 // ================== private ==================
+
+type dataResult struct {
+	Data map[string]map[string]any
+	Err  error
+}
+
+func getDataMap(id int, sqls []string, ch chan dataResult) {
+	result := make(map[string]map[string]any)
+	for _, sql := range sqls {
+		maps, err := clickhouseSourceRepo.QueryRowToMap(sql)
+		if err != nil {
+			ch <- dataResult{Data: nil, Err: err}
+			return
+		}
+
+		for _, rowMap := range maps {
+			key := rowMap[util.PK].(string) + "_" + strconv.Itoa(id)
+			result[key] = rowMap
+		}
+	}
+	ch <- dataResult{Data: result, Err: nil}
+}
+
 func createOutputAndSummaryFile(outputDir string, filePrefix string) (*os.File, *os.File, error) {
 	if outputDir == "" {
 		outputDir = "."
