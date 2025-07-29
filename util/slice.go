@@ -1,11 +1,12 @@
 package util
 
 import (
-	"fmt"
+	"log/slog"
 	"reflect"
 	"sort"
 
 	"github.com/itinycheng/datadiff-go/model"
+	"github.com/spf13/cast"
 )
 
 type Order int
@@ -70,9 +71,17 @@ func ToAnySlice(v any) []any {
 	return nil
 }
 
-func SortAny(s []any, sType Order) {
+func SortByString(s []any, sType Order) {
 	sort.Slice(s, func(i, j int) bool {
-		a, b := fmt.Sprintf("%v", s[i]), fmt.Sprintf("%v", s[j])
+		a, err := cast.ToStringE(s[i])
+		if err != nil {
+			slog.Warn("SortByString: failed to convert value to string", "value", s[i], "error", err)
+		}
+
+		b, err := cast.ToStringE(s[j])
+		if err != nil {
+			slog.Warn("SortByString: failed to convert value to string", "value", s[j], "error", err)
+		}
 		if sType == Asc {
 			return a < b
 		} else {

@@ -4,6 +4,7 @@ go 1.24.2
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.37.1
+	github.com/spf13/cast v1.9.2
 	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v3 v3.0.1
 )

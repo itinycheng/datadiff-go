@@ -20,8 +20,8 @@ func DeepEqual(a, b map[string]any) bool {
 				return false
 			}
 
-			SortAny(vSlice, Asc)
-			SortAny(bvSlice, Asc)
+			SortByString(vSlice, Asc)
+			SortByString(bvSlice, Asc)
 			if !reflect.DeepEqual(vSlice, bvSlice) {
 				return false
 			}
