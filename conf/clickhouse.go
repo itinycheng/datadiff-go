@@ -76,7 +76,7 @@ func (s *Sampling) BuildSampling() string {
 
 	var builder strings.Builder
 	builder.WriteString(SamplingCityHash64)
-	builder.WriteString("(pk) % ")
+	builder.WriteString("(__datadiff_generated_pk) % ")
 	builder.WriteString(fmt.Sprintf("%d = 0", sampleRatio))
 	return builder.String()
 }

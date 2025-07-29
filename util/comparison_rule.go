@@ -11,7 +11,7 @@ import (
 const (
 	totalOrPartitionAggregation = "total_or_partition_aggregation"
 	rowByRowComparison          = "row_by_row_comparison"
-	PK                          = "pk"
+	PK                          = "__datadiff_generated_pk"
 )
 
 func BuildComparisonRules(ruleConfigs []conf.ComparisonRuleConfig) ([]model.ComparisonRule, error) {
