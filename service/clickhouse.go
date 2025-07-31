@@ -15,6 +15,7 @@ import (
 	"github.com/itinycheng/datadiff-go/model"
 	"github.com/itinycheng/datadiff-go/repo"
 	"github.com/itinycheng/datadiff-go/util"
+	"github.com/spf13/cast"
 )
 
 type ClickHouseVerifyService struct{}
@@ -73,8 +74,8 @@ func (service *ClickHouseVerifyService) PrepareDataForVerification(dataPool *mod
 	sourceCh := make(chan dataResult, 1)
 	targetCh := make(chan dataResult, 1)
 
-	go getDataMap(sqls.Id, sqls.Source, sourceCh)
-	go getDataMap(sqls.Id, sqls.Target, targetCh)
+	go getDataMap(sqls.Id, sqls.Source, clickhouseSourceRepo, sourceCh)
+	go getDataMap(sqls.Id, sqls.Target, clickhouseTargetRepo, targetCh)
 	sourceResult := <-sourceCh
 	targetResult := <-targetCh
 
@@ -134,17 +135,17 @@ type dataResult struct {
 	Err  error
 }
 
-func getDataMap(id int, sqls []string, ch chan dataResult) {
+func getDataMap(id int, sqls []string, repo *repo.ClickHouseRepo, ch chan dataResult) {
 	result := make(map[string]map[string]any)
 	for _, sql := range sqls {
-		maps, err := clickhouseSourceRepo.QueryRowToMap(sql)
+		maps, err := repo.QueryRowToMap(sql)
 		if err != nil {
 			ch <- dataResult{Data: nil, Err: err}
 			return
 		}
 
 		for _, rowMap := range maps {
-			key := rowMap[util.PK].(string) + "_" + strconv.Itoa(id)
+			key := rowMap[util.PK].(string) + "_" + cast.ToString(id) 
 			result[key] = rowMap
 		}
 	}

@@ -1,8 +1,10 @@
 package repo
 
 import (
+	"context"
 	"database/sql"
 	"log/slog"
+	"time"
 
 	"github.com/itinycheng/datadiff-go/model"
 )
@@ -48,7 +50,10 @@ func (r *ClickHouseRepo) QueryAllColumns(database, table string) ([]string, erro
 
 func (r *ClickHouseRepo) QueryRowToMap(query string, args ...any) ([]map[string]any, error) {
 	slog.Info("Executing query", "query", query, "args", args)
-	rows, err := r.conn.Query(query, args...)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+
+	rows, err := r.conn.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -81,6 +86,7 @@ func (r *ClickHouseRepo) QueryRowToMap(query string, args ...any) ([]map[string]
 		result = append(result, rowMap)
 	}
 
+	slog.Warn("Query completed", "rows_count", len(result), "error", rows.Err())
 	return result, nil
 }
 

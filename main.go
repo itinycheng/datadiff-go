@@ -61,7 +61,12 @@ func doVerify(table *model.TableInfo, rules []model.ComparisonRule) {
 			OutputDir:   conf.ClickhouseConf.ResultOutputDir,
 		}
 
-		verifyService.PrepareDataForVerification(data)
+		err := verifyService.PrepareDataForVerification(data)
+		if err != nil {
+			slog.Error("Failed to prepare data for verification", "error", err)
+			continue
+		}
+
 		verifyService.Verify(data)
 		slog.Info("Rule verified", "rule", rule, "table", table.Name)
 	}
